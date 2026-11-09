@@ -62,3 +62,6 @@ Phase 2 adds a mobile-first pink storefront, public active-product catalogue, br
 - The checkout stores a payment record as `verification_pending`; it does not verify a bank transfer automatically.
 - The displayed checkout subtotal is an estimate. The database RPC recalculates all prices and delivery at order time.
 - Before production launch, add infrastructure-level rate limiting/CAPTCHA, configure a verified WhatsApp number, review the deployed Supabase RLS/grants, and test the migration and checkout with real staging credentials.
+
+## 2026-11-09 Stability Update
+See `UPDATE-2026-11-09.md` for the admin login password visibility toggle, Vercel Supabase environment variable compatibility, removal of the public Admin footer link, API admin authorization hardening, verification status, and deployment steps.

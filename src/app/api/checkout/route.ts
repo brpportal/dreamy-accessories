@@ -9,6 +9,8 @@ export async function POST(req:NextRequest){
     const supabase=await createSupabaseServerClient();
     const {data,error}=await supabase.rpc('create_guest_order',{p_customer_name:parsed.data.name,p_customer_phone:parsed.data.phone,p_customer_city:parsed.data.city,p_customer_address:parsed.data.address,p_payment_method:parsed.data.paymentMethod,p_items:parsed.data.items});
     if(error) return NextResponse.json({error:error.message},{status:400});
-    return NextResponse.json({order:data},{status:201});
+    const {data:waSetting}=await supabase.from('website_settings').select('setting_value').eq('setting_key','whatsapp').maybeSingle();
+    const whatsapp=waSetting?.setting_value as {order_receiving_number?:string;support_number?:string}|null;
+    return NextResponse.json({order:{...data,whatsapp_number:whatsapp?.order_receiving_number||whatsapp?.support_number||''}},{status:201});
   } catch { return NextResponse.json({error:'Unable to place order. Please try again.'},{status:400}); }
 }
