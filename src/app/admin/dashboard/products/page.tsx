@@ -1,1 +1,2 @@
-import {requireAdmin} from '@/lib/auth/admin';import ProductsManager from '@/components/admin/products-manager';export default async function Page(){await requireAdmin();return <main className="min-h-screen p-6 md:p-10"><div className="mx-auto max-w-6xl"><a className="text-sm text-pink-700" href="/admin/dashboard">← Dashboard</a><h1 className="my-4 text-3xl font-semibold">Products & images</h1><ProductsManager/></div></main>}
+import {requireAdmin} from '@/lib/auth/admin';import ProductsManager from '@/components/admin/products-manager';
+export default async function Page(){await requireAdmin();return <main className="p-5 md:p-10"><div className="mx-auto max-w-6xl"><h1 className="mb-4 text-3xl font-semibold">Products &amp; images</h1><ProductsManager/></div></main>}

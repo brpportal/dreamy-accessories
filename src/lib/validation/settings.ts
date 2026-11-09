@@ -11,6 +11,8 @@ export const businessSettingsSchema = z.object({
   whatsapp_support_number: z.union([phone, z.literal('')]),
   whatsapp_display_name: z.string().trim().max(80),
   whatsapp_order_message: z.string().max(1500),
+  whatsapp_support_message: z.string().max(500).default(''),
+  whatsapp_button_enabled: z.boolean().default(true),
   easypaisa_enabled: z.boolean(),
   easypaisa_number: z.string().trim().regex(/^[0-9]{10,15}$/),
   easypaisa_account_name: z.string().trim().min(2).max(100),

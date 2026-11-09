@@ -1,3 +1,17 @@
 @import "tailwindcss";
-:root{color-scheme:light;--ink:#281b24;--rose:#c7437f;--pink:#fce4ef;--muted:#765e6b}
-*{box-sizing:border-box}body{margin:0;background:#fff9fc;color:var(--ink);font-family:Arial,Helvetica,sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}
+:root{color-scheme:light;--ink:#352331;--rose:#a83c70;--pink:#fce4ef;--muted:#6b5360}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:5rem}
+body{margin:0;background:#fff9fc;color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+@keyframes da-pulse{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.da-pulse{animation:da-pulse .5s ease-out}
+@keyframes da-slide-in{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.da-drawer{animation:da-slide-in .28s ease-out}
+@keyframes da-toast{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.da-toast{animation:da-toast .25s ease-out}
+@keyframes da-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.da-skeleton{background:linear-gradient(90deg,#fce4ef 25%,#fff5f8 50%,#fce4ef 75%);background-size:200% 100%;animation:da-shimmer 1.4s infinite}
+.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
