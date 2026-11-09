@@ -7,7 +7,7 @@ import { Accordion, Eyebrow, Stars } from '@/components/ui';
 import WhatsAppFab from '@/components/whatsapp-fab';
 import { faqItems } from '@/lib/content/faq';
 import { money, effectivePrice, isOnSale, isPurchasable } from '@/lib/format';
-import { ShoppingBag, Search, Sparkles, Truck, ShieldCheck, Wallet, MessageCircle, Gem, HeartHandshake, Headset, Menu, X, Minus, Plus, Instagram, Facebook, BadgeCheck, SearchX } from 'lucide-react';
+import { ShoppingBag, Search, Sparkles, Truck, ShieldCheck, Wallet, MessageCircle, Gem, HeartHandshake, Headset, Menu, X, Minus, Plus, Instagram, Facebook, BadgeCheck, SearchX, CheckCircle2 } from 'lucide-react';
 
 type CartLine = { id: string; name: string; price: number; originalPrice?: number; image: string; quantity: number; stock?: number };
 type Settings = { storeName: string; announcement: string; deliveryFee: number; supportNumber: string; instagram: string; facebook: string };
@@ -23,7 +23,7 @@ export default function Storefront() {
   const [products, setProducts] = useState<Product[]>([]); const [cart, setCart] = useState<CartLine[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [settings, setSettings] = useState<Settings | null>(null); const [reviews, setReviews] = useState<Review[]>([]);
   const [cartOpen, setCartOpen] = useState(false); const [menuOpen, setMenuOpen] = useState(false); const [scrolled, setScrolled] = useState(false); const [pulse, setPulse] = useState(false); const [toast, setToast] = useState(false);
-  const [wish, setWish] = useState<string[]>([]); const [removing, setRemoving] = useState<string | null>(null);
+  const [wish, setWish] = useState<string[]>([]); const [removing, setRemoving] = useState<string | null>(null); const [toastName, setToastName] = useState('');
   const [search, setSearch] = useState(''); const [category, setCategory] = useState('All'); const [range, setRange] = useState(0); const [sort, setSort] = useState<Sort>('featured');
   const cartLoaded = useRef(false); const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,7 +52,7 @@ export default function Storefront() {
       return ex ? old.map(x => x.id === p.id ? { ...x, stock: p.stock_quantity, quantity: Math.min(max, x.quantity + 1) } : x)
         : [...old, { id: p.id, name: p.name, price: effectivePrice(p), originalPrice: isOnSale(p) ? p.price : undefined, image, quantity: 1, stock: p.stock_quantity }]; });
     setPulse(false); requestAnimationFrame(() => setPulse(true)); setTimeout(() => setPulse(false), 600);
-    setToast(true); if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(false), 2500);
+    setToastName(p.name); setToast(true); if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(false), 4000);
   }, []);
   const setQty = (id: string, d: number) => setCart(c => c.map(x => x.id === id ? { ...x, quantity: Math.max(1, Math.min(cap(x.stock), x.quantity + d)) } : x));
   const remove = (id: string) => { trackEvent('remove_from_cart', { productId: id }); setRemoving(id); setTimeout(() => { setCart(c => c.filter(x => x.id !== id)); setRemoving(null); }, 220); };
@@ -139,7 +139,7 @@ export default function Storefront() {
     <nav aria-label="Quick navigation" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-pink-100 bg-white/95 backdrop-blur md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {[{ h: '#home', l: 'Home', I: Sparkles }, { h: '#shop', l: 'Shop', I: Search }, { h: '/track-order', l: 'Track', I: Truck }].map(({ h, l, I }) => h.startsWith('/') ? <Link key={l} href={h} className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] text-[#4a2b3c]"><I size={19} />{l}</Link> : <a key={l} href={h} className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] text-[#4a2b3c]"><I size={19} />{l}</a>)}
       <button onClick={() => { setCartOpen(true); setToast(false); }} className="relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-[#a83c70]" aria-label={`Open bag, ${count} items`}><ShoppingBag size={19} />Bag{count > 0 && <span className="absolute right-[28%] top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#a83c70] px-1 text-[9px] text-white">{count}</span>}</button></nav>
-    {toast && <button onClick={() => { setToast(false); setCartOpen(true); }} className="da-toast fixed inset-x-4 bottom-20 z-40 flex min-h-12 items-center justify-between rounded-full bg-[#352331] px-5 text-sm text-white shadow-xl" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>Added to your bag <span className="font-semibold text-pink-200">View Bag</span></button>}
+    {toast && <button onClick={() => { setToast(false); setCartOpen(true); }} className="da-toast fixed inset-x-4 bottom-20 z-40 flex min-h-12 items-center justify-between gap-3 rounded-full bg-[#352331] px-5 text-sm text-white shadow-xl" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}><span className="flex min-w-0 items-center gap-2"><CheckCircle2 size={18} className="shrink-0 text-green-400" /><span className="truncate">{toastName} added to your bag</span></span><span className="shrink-0 font-semibold text-pink-200">View Bag</span></button>}
 
     {cartOpen && <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={() => setCartOpen(false)}><aside role="dialog" aria-modal="true" aria-label="Your bag" className="da-drawer flex h-full w-full max-w-md flex-col bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
       <div className="flex items-center justify-between border-b border-pink-100 p-5"><h3 className="font-serif text-2xl">Your Bag</h3><button onClick={() => setCartOpen(false)} aria-label="Close bag" className={`grid h-11 w-11 place-items-center rounded-full hover:bg-pink-50 ${ring}`}><X size={20} /></button></div>

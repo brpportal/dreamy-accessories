@@ -7,7 +7,7 @@ import { Accordion, Stars } from '@/components/ui';
 import WhatsAppFab from '@/components/whatsapp-fab';
 import { productInfo } from '@/lib/content/product-info';
 import { money, effectivePrice, isOnSale, savings, isPurchasable } from '@/lib/format';
-import { Gem, ShieldCheck, MessageCircle, Link2, Share2, BadgeCheck, ChevronRight } from 'lucide-react';
+import { Gem, ShieldCheck, MessageCircle, Link2, Share2, BadgeCheck, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 type Detail = { id: string; name: string; slug: string; description: string | null; price: number; sale_price: number | null; stock_quantity: number; category: string | null; images: { image_url: string; alt_text: string | null }[]; rating: { count: number; average: number; breakdown: number[] }; reviews: { id: string; customer_name: string; rating: number; review_title: string | null; review_text: string | null; created_at: string }[]; related: Product[] };
 const ring = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a83c70] focus-visible:ring-offset-2';
@@ -15,6 +15,7 @@ const shortName = (n: string) => { const p = n.trim().split(/\s+/); return p.len
 
 export default function ProductDetail({ product, deliveryFee, supportNumber }: { product: Detail; deliveryFee: number; supportNumber: string }) {
   const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false); const [rating, setRating] = useState(5); const [form, setForm] = useState({ orderNumber: '', phone: '', title: '', text: '' });
+  const [reviewMsg, setReviewMsg] = useState(''); const [reviewOk, setReviewOk] = useState(false); const [addedName, setAddedName] = useState(''); const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(0); const [fade, setFade] = useState(false); const [showBar, setShowBar] = useState(false); const [wish, setWish] = useState<string[]>([]); const [copied, setCopied] = useState(false);
   const buyRef = useRef<HTMLButtonElement>(null); const [recent, setRecent] = useState<Product[]>([]); const [pageUrl, setPageUrl] = useState('');
   const buyable = isPurchasable(product); const sale = isOnSale(product) && buyable; const price = effectivePrice(product);
@@ -35,12 +36,12 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
   function write(p: { id: string; name: string; price: number; originalPrice?: number; image: string; stock: number }) {
     try { const cart = JSON.parse(localStorage.getItem('da-cart') || '[]'); const old = cart.find((x: { id: string }) => x.id === p.id);
       if (old) { old.quantity = Math.min(Math.min(20, p.stock), old.quantity + 1); old.stock = p.stock; } else cart.push({ id: p.id, name: p.name, price: p.price, originalPrice: p.originalPrice, image: p.image, quantity: 1, stock: p.stock });
-      localStorage.setItem('da-cart', JSON.stringify(cart)); trackEvent('add_to_cart', { productId: p.id }); setNotice('Added to your bag.'); } catch { setNotice('Could not update your bag.'); }
+      localStorage.setItem('da-cart', JSON.stringify(cart)); trackEvent('add_to_cart', { productId: p.id }); setNotice('Added to your bag.'); setAddedName(p.name); if (addedTimer.current) clearTimeout(addedTimer.current); addedTimer.current = setTimeout(() => setAddedName(''), 4000); } catch { setNotice('Could not update your bag.'); }
   }
   const add = () => buyable && write({ id: product.id, name: product.name, price, originalPrice: isOnSale(product) ? product.price : undefined, image: imgs[0]?.image_url || '', stock: product.stock_quantity });
   const addRelated = (p: Product) => { if (!isPurchasable(p)) return; write({ id: p.id, name: p.name, price: effectivePrice(p), originalPrice: isOnSale(p) ? p.price : undefined, image: [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order)[0]?.image_url || '', stock: p.stock_quantity }); };
   const toggleWish = (id: string) => setWish(w => { const n = w.includes(id) ? w.filter(x => x !== id) : [...w, id]; if (!w.includes(id)) trackEvent('wishlist_add', { productId: id }); try { localStorage.setItem('da-wishlist', JSON.stringify(n)); } catch {} return n; });
-  async function submit(e: React.FormEvent) { e.preventDefault(); setBusy(true); setNotice(''); try { const r = await fetch('/api/reviews', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, orderNumber: form.orderNumber, phone: form.phone, rating, title: form.title, text: form.text }) }); const j = await r.json(); if (!r.ok) throw Error(j.error); setNotice('Review submitted. It will appear after store approval.'); setForm({ orderNumber: '', phone: '', title: '', text: '' }); } catch (err) { setNotice(err instanceof Error ? err.message : 'Review could not be submitted.'); } finally { setBusy(false); } }
+  async function submit(e: React.FormEvent) { e.preventDefault(); setBusy(true); setReviewMsg(''); try { const r = await fetch('/api/reviews', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, orderNumber: form.orderNumber, phone: form.phone, rating, title: form.title, text: form.text }) }); const j = await r.json(); if (!r.ok) throw Error(j.error); setReviewOk(true); setReviewMsg('Thank you! Your review has been submitted. It will appear on this page after the store approves it.'); setForm({ orderNumber: '', phone: '', title: '', text: '' }); } catch (err) { setReviewOk(false); setReviewMsg(err instanceof Error ? err.message : 'Review could not be submitted.'); } finally { setBusy(false); } }
   async function share(kind: 'wa' | 'copy') {
     const url = window.location.href;
     if (kind === 'wa') { window.open(`https://wa.me/?text=${encodeURIComponent(`${product.name} — ${money(price)}\n${url}`)}`, '_blank', 'noopener'); return; }
@@ -79,11 +80,12 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
         <label className="mt-3 block text-sm">Rating<select value={rating} onChange={e => setRating(Number(e.target.value))} className={`mt-1 w-full rounded-xl border p-3 ${ring}`}>{[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n} stars</option>)}</select></label>
         <label className="mt-3 block text-sm">Title (optional)<input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className={`mt-1 w-full rounded-xl border p-3 ${ring}`} /></label>
         <label className="mt-3 block text-sm">Your review<textarea required minLength={5} value={form.text} onChange={e => setForm({ ...form, text: e.target.value })} rows={4} className={`mt-1 w-full rounded-xl border p-3 ${ring}`} /></label>
-        <button disabled={busy} className={`mt-4 min-h-12 w-full rounded-full bg-[#a83c70] p-3 font-semibold text-white disabled:opacity-50 ${ring}`}>{busy ? 'Submitting…' : 'Submit review'}</button></form></section>
+        <button disabled={busy} className={`mt-4 min-h-12 w-full rounded-full bg-[#a83c70] p-3 font-semibold text-white disabled:opacity-50 ${ring}`}>{busy ? 'Submitting…' : 'Submit review'}</button>{reviewMsg && <p role="status" className={`mt-4 flex items-start gap-2 rounded-xl p-3 text-sm ${reviewOk ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{reviewOk && <CheckCircle2 size={17} className="mt-0.5 shrink-0" />}{reviewMsg}</p>}</form></section>
 
     {product.related.length > 0 && <section className="mt-16"><h2 className="font-serif text-3xl">You may also love</h2><div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">{product.related.map(p => <ProductCard key={p.id} p={p} onAdd={addRelated} wished={wish.includes(p.id)} onWish={toggleWish} />)}</div></section>}
     {recent.length > 0 && <section className="mt-16"><h2 className="font-serif text-3xl">Recently viewed</h2><div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">{recent.map(p => <ProductCard key={p.id} p={p} onAdd={addRelated} wished={wish.includes(p.id)} onWish={toggleWish} />)}</div></section>}
   </div>
+  {addedName && <div role="status" className="fixed inset-x-4 bottom-24 z-50 flex min-h-12 items-center justify-between gap-3 rounded-full bg-[#352331] px-5 text-sm text-white shadow-xl"><span className="flex min-w-0 items-center gap-2"><CheckCircle2 size={18} className="shrink-0 text-green-400" /><span className="truncate">{addedName} added to your bag</span></span><Link href="/checkout" className="shrink-0 font-semibold text-pink-200">Checkout</Link></div>}
   {showBar && <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-pink-100 bg-white/95 px-4 pt-3 backdrop-blur md:hidden" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
     <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-pink-50">{imgs[0] && <img src={imgs[0].image_url} alt="" className="h-full w-full object-cover" />}</div>
     <div className="min-w-0 flex-1"><p className="truncate text-xs">{product.name}</p><p className="text-sm font-semibold text-[#a83c70]">{money(price)}</p></div>
