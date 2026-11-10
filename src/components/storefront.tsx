@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { trackEvent } from '@/components/analytics-tracker';
 import ProductCard, { type Product } from '@/components/product-card';
-import { Accordion, Eyebrow, Stars } from '@/components/ui';
+import { Accordion, Dropdown, Eyebrow, Stars } from '@/components/ui';
 import WhatsAppFab from '@/components/whatsapp-fab';
 import { faqItems } from '@/lib/content/faq';
 import { money, effectivePrice, isOnSale, isPurchasable } from '@/lib/format';
@@ -109,7 +109,7 @@ export default function Storefront() {
 
     <section id="shop" className="mx-auto max-w-7xl px-5 py-16"><Eyebrow label="The Collection" title="Find your favourite" sub="A lovely little something is waiting for you." />
       <div className="mb-6 space-y-3"><div className="flex flex-col gap-3 sm:flex-row"><label className="flex min-h-11 flex-1 items-center gap-2 rounded-full border border-pink-200 bg-white px-4 focus-within:ring-2 focus-within:ring-[#a83c70]"><Search size={17} className="text-[#a83c70]" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..." aria-label="Search products" className="w-full bg-transparent text-sm outline-none" /></label>
-        <select value={sort} onChange={e => setSort(e.target.value as Sort)} aria-label="Sort products" className={`min-h-11 rounded-full border border-pink-200 bg-white px-4 text-sm ${ring}`}><option value="featured">Featured</option><option value="low">Price: Low to High</option><option value="high">Price: High to Low</option><option value="newest">Newest</option><option value="rated">Top Rated</option></select></div>
+        <div className="sm:w-56"><Dropdown<Sort> ariaLabel="Sort products" label="Sort:" value={sort} onChange={setSort} options={[{ value: 'featured', label: 'Featured' }, { value: 'low', label: 'Price: Low to High' }, { value: 'high', label: 'Price: High to Low' }, { value: 'newest', label: 'Newest' }, { value: 'rated', label: 'Top Rated' }]} /></div></div>
         {categories.length > 0 && <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Categories">{['All', ...categories].map(c => <button key={c} onClick={() => pickCategory(c)} aria-pressed={category === c} className={chip(category === c)}>{c}</button>)}</div>}
         <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Price range">{PRICE_RANGES.map((r, i) => <button key={r.label} onClick={() => setRange(i)} aria-pressed={range === i} className={chip(range === i)}>{r.label}</button>)}</div></div>
       {!loading && !error && products.length > 0 && <p className="mb-4 text-xs text-[#6b5360]">Showing {shown.length} product{shown.length === 1 ? '' : 's'}</p>}
@@ -122,7 +122,7 @@ export default function Storefront() {
     </section>
 
     <section id="why-us" className="bg-[#f9e7ef] px-5 py-16"><div className="mx-auto max-w-7xl"><Eyebrow label="Why Sparkles" title="Made to feel special" /><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{usps.map(({ i: I, t, d }) => <div key={t} className="rounded-2xl bg-white p-6 text-center"><span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-pink-50 text-[#a83c70]"><I size={22} /></span><h3 className="mt-4 text-sm font-semibold">{t}</h3><p className="mt-1.5 text-sm leading-6 text-[#6b5360]">{d}</p></div>)}</div>
-      <div className="mx-auto mt-12 max-w-xl text-center"><p className="text-xs font-semibold uppercase tracking-[.25em] text-[#a83c70]">A note from us</p><p className="mt-4 text-sm leading-7 text-[#5f4857]">Choose your favourites, place your order, and complete your advance payment through Easypaisa or JazzCash. We’ll confirm your order with you on WhatsApp.</p></div></div></section>
+      <div className="mx-auto mt-12 max-w-xl text-center"><p className="text-xs font-semibold uppercase tracking-[.25em] text-[#a83c70]">A note from us</p><p className="mt-4 text-sm leading-7 text-[#5f4857]">Har product hum khud pasand karke, check karke aur pyar se pack karke bhejte hain. Aap ka bharosa hi hamari dukaan hai — is liye har order ki confirmation aur tracking aap ko WhatsApp par milti hai.</p><p className="mt-3 font-serif text-base italic text-[#a83c70]">— Team Sparklesbyfarry</p></div></div></section>
 
     {reviews.length > 0 && <section className="mx-auto max-w-7xl px-5 py-16"><Eyebrow label="Customer Love" title="Kind words from our customers" /><div className="no-scrollbar -mx-5 flex snap-x gap-4 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">{reviews.slice(0, 6).map(r => <figure key={r.id} className="w-72 shrink-0 snap-start rounded-2xl border border-pink-100 bg-white p-6 md:w-auto"><Stars value={r.rating} size={16} />{r.title && <p className="mt-3 font-semibold">{r.title}</p>}<blockquote className="mt-2 text-sm leading-6 text-[#5f4857]">{r.excerpt}</blockquote><figcaption className="mt-4 text-sm font-medium">{r.name}{r.product && <span className="block text-xs font-normal text-[#6b5360]">{r.product}</span>}<span className="mt-2 inline-flex items-center gap-1 rounded-full bg-pink-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#a83c70]"><BadgeCheck size={12} /> Verified Buyer</span></figcaption></figure>)}</div></section>}
 

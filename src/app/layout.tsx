@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Playfair_Display, Plus_Jakarta_Sans } from 'next/font/google';
 import AnalyticsTracker from '@/components/analytics-tracker';
+const display = Playfair_Display({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
+const body = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 const title = 'Sparklesbyfarry | Sparkle. Shine. Inspire.';
 const description = 'Discover beautiful accessories delivered across Pakistan. Advance payment via Easypaisa and JazzCash.';
 export const metadata: Metadata = {
@@ -10,4 +13,4 @@ export const metadata: Metadata = {
   openGraph: { title, description, siteName: 'Sparklesbyfarry', type: 'website', images: [{ url: '/og-cover.jpg', width: 1200, height: 630, alt: 'Sparklesbyfarry' }] },
   twitter: { card: 'summary_large_image', title, description, images: ['/og-cover.jpg'] }
 };
-export default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="en"><body><AnalyticsTracker/>{children}</body></html>; }
+export default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="en" className={`${display.variable} ${body.variable}`}><body><AnalyticsTracker/>{children}</body></html>; }

@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { trackEvent } from '@/components/analytics-tracker';
 import ProductCard, { type Product } from '@/components/product-card';
 import AddedOverlay, { type AddedItem } from '@/components/added-overlay';
-import { Accordion, Stars } from '@/components/ui';
+import { Accordion, StarInput, Stars } from '@/components/ui';
+import SiteHeader from '@/components/site-header';
+import { addLine, openCart } from '@/lib/cart';
 import WhatsAppFab from '@/components/whatsapp-fab';
 import { productInfo } from '@/lib/content/product-info';
 import { money, effectivePrice, isOnSale, savings, isPurchasable } from '@/lib/format';
-import { Gem, ShieldCheck, MessageCircle, Link2, Share2, BadgeCheck, ChevronRight, CheckCircle2, X } from 'lucide-react';
+import { Gem, ShieldCheck, MessageCircle, Link2, Share2, BadgeCheck, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 type Detail = { id: string; name: string; slug: string; description: string | null; price: number; sale_price: number | null; stock_quantity: number; category: string | null; images: { image_url: string; alt_text: string | null }[]; rating: { count: number; average: number; breakdown: number[] }; reviews: { id: string; customer_name: string; rating: number; review_title: string | null; review_text: string | null; created_at: string }[]; similar: Product[]; recommended: Product[] };
 const ring = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a83c70] focus-visible:ring-offset-2';
@@ -35,9 +37,7 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
   }, []);
   function pick(i: number) { if (i === active) return; setFade(true); setTimeout(() => { setActive(i); setFade(false); }, 150); }
   function write(p: { id: string; name: string; price: number; originalPrice?: number; image: string; stock: number }) {
-    try { const cart = JSON.parse(localStorage.getItem('da-cart') || '[]'); const old = cart.find((x: { id: string }) => x.id === p.id);
-      if (old) { old.quantity = Math.min(Math.min(20, p.stock), old.quantity + 1); old.stock = p.stock; } else cart.push({ id: p.id, name: p.name, price: p.price, originalPrice: p.originalPrice, image: p.image, quantity: 1, stock: p.stock });
-      localStorage.setItem('da-cart', JSON.stringify(cart)); trackEvent('add_to_cart', { productId: p.id }); setNotice(''); setAddedItem({ name: p.name, image: p.image }); } catch { setNotice('Could not update your bag.'); }
+    try { addLine({ id: p.id, name: p.name, price: p.price, originalPrice: p.originalPrice, image: p.image, stock: p.stock }); trackEvent('add_to_cart', { productId: p.id }); setNotice(''); setAddedItem({ name: p.name, image: p.image }); } catch { setNotice('Could not update your bag.'); }
   }
   const add = () => buyable && write({ id: product.id, name: product.name, price, originalPrice: isOnSale(product) ? product.price : undefined, image: imgs[0]?.image_url || '', stock: product.stock_quantity });
   const addRelated = (p: Product) => { if (!isPurchasable(p)) return; write({ id: p.id, name: p.name, price: effectivePrice(p), originalPrice: isOnSale(p) ? p.price : undefined, image: [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order)[0]?.image_url || '', stock: p.stock_quantity }); };
@@ -53,7 +53,7 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
   const accItems = [{ q: 'Product Details', a: product.description || 'A lovely addition to your everyday style.' }, ...info.map(i => ({ q: i.title, a: i.body }))];
   const r = product.rating;
 
-  return <main className="min-h-screen bg-[#fff9fc] px-5 py-8 pb-28 text-[#352331] md:pb-10"><div className="mx-auto max-w-6xl">
+  return <><SiteHeader /><main className="min-h-screen bg-[#fff9fc] px-5 py-8 pb-28 text-[#352331] md:pb-10"><div className="mx-auto max-w-6xl">
     <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1 text-xs text-[#6b5360]"><Link href="/" className="hover:text-[#a83c70]">Home</Link><ChevronRight size={12} />{product.category && <><Link href="/#shop" className="hover:text-[#a83c70]">{product.category}</Link><ChevronRight size={12} /></>}<span className="text-[#352331]">{product.name}</span></nav>
     <div className="mt-6 grid gap-10 md:grid-cols-2">
       <div className="md:flex md:gap-3">
@@ -66,7 +66,7 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
         <p className="mt-4 text-sm">{buyable ? (product.stock_quantity <= 10 ? `Only ${product.stock_quantity} left` : 'In stock') : 'Currently sold out'}</p>
         <button ref={buyRef} disabled={!buyable} onClick={add} className={`mt-6 min-h-12 w-full rounded-full bg-[#a83c70] px-8 text-sm font-semibold text-white transition hover:bg-[#8e2f5e] disabled:bg-gray-300 disabled:text-gray-500 sm:w-auto ${ring}`}>{buyable ? 'Add to Bag' : 'Sold Out'}</button>
         {notice && <p role="status" className="mt-4 rounded-xl bg-pink-50 p-3 text-sm text-[#8e2f5e]">{notice}{notice === 'Added to your bag.' && <> <Link href="/checkout" className="font-semibold underline">Checkout</Link></>}</p>}
-        <ul className="mt-6 grid gap-3 sm:grid-cols-3">{trust.map(({ i: I, t }) => <li key={t} className="flex items-center gap-2 rounded-2xl border border-pink-100 bg-white p-3 text-xs font-medium"><I size={18} className="shrink-0 text-[#a83c70]" />{t}</li>)}</ul>
+        <ul className="mt-6 grid gap-3 sm:grid-cols-3">{trust.map(({ i: I, t }) => <li key={t} className="flex items-center gap-2 rounded-2xl border border-pink-100 bg-white p-3 text-xs font-medium"><I size={18} className="shrink-0 text-[#a83c70]" />{t}</li>)}</ul><p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[#8e2f5e]"><ShieldCheck size={14} className="shrink-0" /> Damage ho to 50% refund ya replacement — no tension.</p>
         <div className="mt-6"><Accordion items={accItems} /></div>
         <div className="mt-6 flex flex-wrap items-center gap-2 text-sm"><span className="mr-1 flex items-center gap-1 text-[#6b5360]"><Share2 size={15} /> Share</span><button onClick={() => share('wa')} className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-4 text-xs font-medium ${ring}`}><MessageCircle size={14} /> WhatsApp</button><button onClick={() => share('copy')} className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-4 text-xs font-medium ${ring}`}><Link2 size={14} /> {copied ? 'Link copied' : 'Copy link'}</button>
           {supportNumber && <a href={`https://wa.me/${supportNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="ml-auto text-xs text-[#a83c70] underline">Ask on WhatsApp</a>}</div>
@@ -77,7 +77,7 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
     <section id="reviews" className="mt-16"><h2 className="font-serif text-3xl">Ratings &amp; reviews</h2><div className="mt-6 grid gap-8 lg:grid-cols-[300px_1fr]"><div>{r.count > 0 && <div className="rounded-2xl border border-pink-100 bg-white p-5"><div className="flex items-center gap-3"><span className="font-serif text-4xl">{r.average.toFixed(1)}</span><div><Stars value={r.average} size={16} /><p className="text-xs text-[#6b5360]">{r.count} review{r.count === 1 ? '' : 's'}</p></div></div><div className="mt-4 space-y-1.5">{[5, 4, 3, 2, 1].map(n => { const pct = Math.round(((r.breakdown[n] || 0) / r.count) * 100); return <div key={n} className="flex items-center gap-2 text-xs"><span className="w-6">{n}★</span><div className="h-2 flex-1 overflow-hidden rounded-full bg-pink-100"><div className="h-full rounded-full bg-[#a83c70]" style={{ width: `${pct}%` }} /></div><span className="w-9 text-right text-[#6b5360]">{pct}%</span></div>; })}</div></div>}{r.count === 0 && <div className="rounded-2xl border border-pink-100 bg-white p-5"><Stars value={0} size={16} /><p className="mt-2 text-sm text-[#6b5360]">No ratings yet - be the first to review this product.</p></div>}</div><div>{product.reviews.length ? <div className="flex snap-x gap-4 overflow-x-auto pb-2">{product.reviews.map(x => <article key={x.id} className="w-[270px] shrink-0 snap-start rounded-2xl border border-pink-100 bg-white p-5"><div className="flex items-center justify-between gap-2"><Stars value={x.rating} size={15} /><span className="inline-flex items-center gap-1 rounded-full bg-pink-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-[#a83c70]"><BadgeCheck size={12} /> Verified</span></div>{x.review_title && <h3 className="mt-2 font-semibold">{x.review_title}</h3>}<p className="mt-2 text-sm text-[#5f4857]">{x.review_text}</p><p className="mt-3 text-xs text-[#6b5360]">{shortName(x.customer_name)} · {new Date(x.created_at).toLocaleDateString('en-GB')}</p></article>)}</div> : <p className="mt-4 text-sm text-[#6b5360]">No approved reviews yet.</p>}<button type="button" onClick={() => setShowForm(!showForm)} aria-expanded={showForm} className={`mt-5 inline-flex min-h-11 items-center rounded-full border border-[#a83c70] bg-white px-6 text-sm font-semibold text-[#a83c70] ${ring}`}>{showForm ? 'Close the form' : 'Write a review'}</button>{showForm && <form onSubmit={submit} className="mt-5 rounded-2xl border border-pink-100 bg-white p-6"><h2 className="font-serif text-2xl">Write a review</h2><p className="mt-2 text-xs text-[#6b5360]">Verified purchase required. Enter your order number and checkout phone.</p>
         <label className="mt-4 block text-sm">Order number<input required value={form.orderNumber} onChange={e => setForm({ ...form, orderNumber: e.target.value })} className={`mt-1 w-full rounded-xl border p-3 ${ring}`} /></label>
         <label className="mt-3 block text-sm">Checkout phone<input required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={`mt-1 w-full rounded-xl border p-3 ${ring}`} /></label>
-        <label className="mt-3 block text-sm">Rating<select value={rating} onChange={e => setRating(Number(e.target.value))} className={`mt-1 w-full rounded-xl border p-3 ${ring}`}>{[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n} stars</option>)}</select></label>
+        <div className="mt-3 text-sm">Rating<StarInput value={rating} onChange={setRating} /></div>
         <label className="mt-3 block text-sm">Title (optional)<input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className={`mt-1 w-full rounded-xl border p-3 ${ring}`} /></label>
         <label className="mt-3 block text-sm">Your review<textarea required minLength={5} value={form.text} onChange={e => setForm({ ...form, text: e.target.value })} rows={4} className={`mt-1 w-full rounded-xl border p-3 ${ring}`} /></label>
         <button disabled={busy} className={`mt-4 min-h-12 w-full rounded-full bg-[#a83c70] p-3 font-semibold text-white disabled:opacity-50 ${ring}`}>{busy ? 'Submitting…' : 'Submit review'}</button>{reviewMsg && <p role="status" className={`mt-4 flex items-start gap-2 rounded-xl p-3 text-sm ${reviewOk ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{reviewOk && <CheckCircle2 size={17} className="mt-0.5 shrink-0" />}{reviewMsg}</p>}</form>}</div></div></section>
@@ -85,12 +85,12 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
     
     {recent.length > 0 && <section className="mt-16"><h2 className="font-serif text-3xl">Recently viewed</h2><div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">{recent.map(p => <ProductCard key={p.id} p={p} onAdd={addRelated} wished={wish.includes(p.id)} onWish={toggleWish} />)}</div></section>}
   </div>
-  <AddedOverlay item={addedItem} onClose={() => setAddedItem(null)} viewCartHref="/checkout" />
+  <AddedOverlay item={addedItem} onClose={() => setAddedItem(null)} onViewCart={() => { setAddedItem(null); openCart(); }} />
   {showBar && <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-pink-100 bg-white/95 px-4 pt-3 backdrop-blur md:hidden" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
     <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-pink-50">{imgs[0] && <img src={imgs[0].image_url} alt="" className="h-full w-full object-cover" />}</div>
     <div className="min-w-0 flex-1"><p className="truncate text-xs">{product.name}</p><p className="text-sm font-semibold text-[#a83c70]">{money(price)}</p></div>
     <button disabled={!buyable} onClick={add} className={`min-h-11 rounded-full bg-[#a83c70] px-6 text-sm font-semibold text-white disabled:bg-gray-300 ${ring}`}>{buyable ? 'Add to Bag' : 'Sold Out'}</button></div>}
   
   <WhatsAppFab lift={showBar} message={`Product: ${product.name} ${pageUrl}`.trim()} />
-  </main>;
+  </main></>;
 }

@@ -1,8 +1,20 @@
 @import "tailwindcss";
+@theme inline {
+  --font-serif: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-brand: #a83c70; --color-brand-dark: #8e2f5e; --color-ink: #352331; --color-muted: #6b5360; --color-surface: #fff9fc; --color-blush: #fce4ef; --color-gold: #c9962b;
+}
 :root{color-scheme:light;--ink:#352331;--rose:#a83c70;--pink:#fce4ef;--muted:#6b5360}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:5rem}
-body{margin:0;background:#fff9fc;color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+body{margin:0;background:#fff9fc;color:var(--ink);font-family:var(--font-body),system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+h1,h2,h3{text-wrap:balance}
+::selection{background:#f6cfe1;color:#352331}
+.tabular{font-variant-numeric:tabular-nums}
+@keyframes da-pop-in{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.da-menu{animation:da-pop-in .16s ease-out}
+@keyframes da-sheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.da-sheet{animation:da-sheet .28s cubic-bezier(.2,.8,.2,1)}
 button,input,textarea,select{font:inherit}
 button{cursor:pointer}
 @keyframes da-pulse{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}

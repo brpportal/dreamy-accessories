@@ -1,10 +1,12 @@
 'use client';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { Check, ShoppingBag, ArrowRight } from 'lucide-react';
 
 export type AddedItem = { name: string; image: string };
 
 export default function AddedOverlay({ item, onClose, onViewCart, viewCartHref }: { item: AddedItem | null; onClose: () => void; onViewCart?: () => void; viewCartHref?: string }) {
+  useEffect(() => { if (!item) return; const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc); }, [item, onClose]);
   if (!item) return null;
   return <div className="da-fade fixed inset-0 z-[95] flex items-center justify-center bg-[#352331]/60 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Added to bag" onClick={onClose}>
     <div className="da-pop w-full max-w-sm rounded-3xl bg-white p-7 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
