@@ -9,8 +9,9 @@ export async function GET() {
     if (error) throw error;
     const m: Record<string, Record<string, unknown>> = {};
     (data || []).forEach((r: { setting_key: string; setting_value: Record<string, unknown> }) => { m[r.setting_key] = r.setting_value || {}; });
+    const rawName = (m.store?.store_name as string) || '';
     return NextResponse.json({
-      storeName: (m.store?.store_name as string) || 'Sparklesbyfarry',
+      storeName: rawName && !['Store', 'Dreamy Accessories'].includes(rawName) ? rawName : 'Sparklesbyfarry',
       announcement: (m.store?.announcement_text as string) || '',
       deliveryFee: Number(m.delivery?.delivery_fee ?? 0),
       supportNumber: (m.whatsapp?.support_number as string) || (m.whatsapp?.order_receiving_number as string) || '',

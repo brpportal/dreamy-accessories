@@ -29,3 +29,13 @@ export async function PUT(req: Request) { const s = await admin(); if (!s) retur
   const q = z.object({ id: z.string().uuid(), is_active: z.boolean().optional(), is_featured: z.boolean().optional(), stock_quantity: z.number().int().min(0).max(1000000).optional() }).safeParse(await req.json().catch(() => null)); if (!q.success) return bad(q);
   const { id, ...u } = q.data; if (!Object.keys(u).length) return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 });
   const { error } = await s.from('products').update({ ...u, updated_at: new Date().toISOString() }).eq('id', id); if (error) return dbErr(error); return NextResponse.json({ ok: true }); }
+export async function DELETE(req: Request) { const s = await admin(); if (!s) return unauthorized();
+  const raw = await req.json().catch(() => null); const id = z.string().uuid().safeParse(raw?.id); if (!id.success) return NextResponse.json({ error: 'Invalid product.' }, { status: 400 });
+  await s.from('product_images').delete().eq('product_id', id.data);
+  const { error } = await s.from('products').delete().eq('id', id.data);
+  if (error) { // Product is referenced by orders/reviews: hide it instead, so order history stays intact.
+    const { error: softErr } = await s.from('products').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', id.data);
+    if (softErr) return dbErr(softErr);
+    return NextResponse.json({ ok: true, archived: true, message: 'This product has orders or reviews attached, so it was hidden from the store instead of being deleted.' });
+  }
+  return NextResponse.json({ ok: true }); }

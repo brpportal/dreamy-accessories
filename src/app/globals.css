@@ -11,6 +11,12 @@ button{cursor:pointer}
 .da-drawer{animation:da-slide-in .28s ease-out}
 @keyframes da-toast{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .da-toast{animation:da-toast .25s ease-out}
+@keyframes da-fade{from{opacity:0}to{opacity:1}}
+.da-fade{animation:da-fade .22s ease-out}
+@keyframes da-pop{0%{opacity:0;transform:scale(.92) translateY(14px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+.da-pop{animation:da-pop .3s ease-out}
+@keyframes da-check{0%{transform:scale(0)}55%{transform:scale(1.18)}100%{transform:scale(1)}}
+.da-check{animation:da-check .5s ease-out}
 @keyframes da-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 .da-skeleton{background:linear-gradient(90deg,#fce4ef 25%,#fff5f8 50%,#fce4ef 75%);background-size:200% 100%;animation:da-shimmer 1.4s infinite}
 .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none}
