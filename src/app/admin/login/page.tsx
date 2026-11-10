@@ -66,7 +66,7 @@ export default function AdminLogin() {
         </form>
         <div className="mt-7 flex items-center justify-center gap-2 text-[11px] text-[#a18b99]"><LockKeyhole size={13}/> Authorized administrators only</div>
       </section>
-      <p className="relative mt-6 text-center text-xs text-[#a18b99]">Dreamy Accessories · Private Admin Portal</p>
+      <p className="relative mt-6 text-center text-xs text-[#a18b99]">Sparklesbyfarry · Private Admin Portal</p>
     </main>
   );
 }

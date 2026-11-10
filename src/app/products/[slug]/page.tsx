@@ -15,11 +15,11 @@ async function load(slug: string) {
 }
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params; const r = await load(slug).catch(() => null);
-  if (!r) return { title: 'Product | Dreamy Accessories' };
+  if (!r) return { title: 'Product | Sparklesbyfarry' };
   const { p } = r; const img = [...((p.product_images || []) as Img[])].sort((a, b) => a.display_order - b.display_order)[0]?.image_url;
   const price = `Rs. ${effectivePrice(p).toLocaleString('en-PK')}`;
   const desc = `${price} · ${(p.description || 'A lovely addition to your everyday style.').slice(0, 140)}`;
-  return { title: `${p.name} | Dreamy Accessories`, description: desc, openGraph: { title: `${p.name} — ${price}`, description: desc, type: 'website', images: img ? [{ url: img }] : undefined }, twitter: { card: 'summary_large_image', title: `${p.name} — ${price}`, description: desc, images: img ? [img] : undefined } };
+  return { title: `${p.name} | Sparklesbyfarry`, description: desc, openGraph: { title: `${p.name} — ${price}`, description: desc, type: 'website', images: img ? [{ url: img }] : undefined }, twitter: { card: 'summary_large_image', title: `${p.name} — ${price}`, description: desc, images: img ? [img] : undefined } };
 }
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params; const r = await load(slug); if (!r) notFound(); const { s, p } = r;
