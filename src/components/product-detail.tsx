@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { trackEvent } from '@/components/analytics-tracker';
 import ProductCard, { type Product } from '@/components/product-card';
 import AddedOverlay, { type AddedItem } from '@/components/added-overlay';
@@ -10,7 +11,7 @@ import { addLine, openCart } from '@/lib/cart';
 import WhatsAppFab from '@/components/whatsapp-fab';
 import { productInfo } from '@/lib/content/product-info';
 import { money, effectivePrice, isOnSale, savings, isPurchasable } from '@/lib/format';
-import { Gem, ShieldCheck, MessageCircle, Link2, Share2, BadgeCheck, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Gem, ShieldCheck, MessageCircle, Link2, Share2, BadgeCheck, ChevronRight, CheckCircle2, Zap } from 'lucide-react';
 
 type Detail = { id: string; name: string; slug: string; description: string | null; price: number; sale_price: number | null; stock_quantity: number; category: string | null; images: { image_url: string; alt_text: string | null }[]; rating: { count: number; average: number; breakdown: number[] }; reviews: { id: string; customer_name: string; rating: number; review_title: string | null; review_text: string | null; created_at: string }[]; similar: Product[]; recommended: Product[] };
 const ring = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a83c70] focus-visible:ring-offset-2';
@@ -21,6 +22,7 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
   const [reviewMsg, setReviewMsg] = useState(''); const [reviewOk, setReviewOk] = useState(false); const [showForm, setShowForm] = useState(false); const [addedItem, setAddedItem] = useState<AddedItem | null>(null);
   const [active, setActive] = useState(0); const [fade, setFade] = useState(false); const [showBar, setShowBar] = useState(false); const [wish, setWish] = useState<string[]>([]); const [copied, setCopied] = useState(false);
   const buyRef = useRef<HTMLButtonElement>(null); const [recent, setRecent] = useState<Product[]>([]); const [pageUrl, setPageUrl] = useState('');
+  const router = useRouter();
   const buyable = isPurchasable(product); const sale = isOnSale(product) && buyable; const price = effectivePrice(product);
   const imgs = product.images.filter(im => im.image_url); const main = imgs[active];
   const info = productInfo(deliveryFee);
@@ -40,6 +42,7 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
     try { addLine({ id: p.id, name: p.name, price: p.price, originalPrice: p.originalPrice, image: p.image, stock: p.stock }); trackEvent('add_to_cart', { productId: p.id }); setNotice(''); setAddedItem({ name: p.name, image: p.image }); } catch { setNotice('Could not update your bag.'); }
   }
   const add = () => buyable && write({ id: product.id, name: product.name, price, originalPrice: isOnSale(product) ? product.price : undefined, image: imgs[0]?.image_url || '', stock: product.stock_quantity });
+  const buyNow = () => { if (!buyable) return; try { addLine({ id: product.id, name: product.name, price, originalPrice: isOnSale(product) ? product.price : undefined, image: imgs[0]?.image_url || '', stock: product.stock_quantity }); trackEvent('buy_now', { productId: product.id }); router.push('/checkout'); } catch { setNotice('Could not start checkout. Please try again.'); } };
   const addRelated = (p: Product) => { if (!isPurchasable(p)) return; write({ id: p.id, name: p.name, price: effectivePrice(p), originalPrice: isOnSale(p) ? p.price : undefined, image: [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order)[0]?.image_url || '', stock: p.stock_quantity }); };
   const toggleWish = (id: string) => setWish(w => { const n = w.includes(id) ? w.filter(x => x !== id) : [...w, id]; if (!w.includes(id)) trackEvent('wishlist_add', { productId: id }); try { localStorage.setItem('da-wishlist', JSON.stringify(n)); } catch {} return n; });
   async function submit(e: React.FormEvent) { e.preventDefault(); setBusy(true); setReviewMsg(''); try { const r = await fetch('/api/reviews', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, orderNumber: form.orderNumber, phone: form.phone, rating, title: form.title, text: form.text }) }); const j = await r.json(); if (!r.ok) throw Error(j.error); setReviewOk(true); setReviewMsg('Thank you! Your review has been submitted. It will appear on this page after the store approves it.'); setForm({ orderNumber: '', phone: '', title: '', text: '' }); } catch (err) { setReviewOk(false); setReviewMsg(err instanceof Error ? err.message : 'Review could not be submitted.'); } finally { setBusy(false); } }
@@ -64,12 +67,16 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
         <button type="button" onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })} className={`mt-3 flex items-center gap-2 text-sm text-[#6b5360] ${ring}`}><Stars value={r.average} size={16} />{r.count > 0 ? <><span>{r.average.toFixed(1)}</span><span className="underline">({r.count} review{r.count === 1 ? '' : 's'}) — tap to read &amp; write</span></> : <span className="underline">No reviews yet — tap to write one</span>}</button>
         <p className="mt-5 flex flex-wrap items-baseline gap-x-3 text-2xl font-bold text-[#a83c70]">{money(price)}{sale && <><del className="text-base font-normal text-gray-400">{money(product.price)}</del><span className="rounded-full bg-[#a83c70] px-2.5 py-1 text-[11px] font-bold uppercase text-white">Save {money(savings(product))}</span></>}</p>
         <p className="mt-4 text-sm">{buyable ? (product.stock_quantity <= 10 ? `Only ${product.stock_quantity} left` : 'In stock') : 'Currently sold out'}</p>
-        <button ref={buyRef} disabled={!buyable} onClick={add} className={`mt-6 min-h-12 w-full rounded-full bg-[#a83c70] px-8 text-sm font-semibold text-white transition hover:bg-[#8e2f5e] disabled:bg-gray-300 disabled:text-gray-500 sm:w-auto ${ring}`}>{buyable ? 'Add to Bag' : 'Sold Out'}</button>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button ref={buyRef} disabled={!buyable} onClick={add} className={`min-h-12 w-full rounded-full bg-[#a83c70] px-8 text-sm font-semibold text-white transition hover:bg-[#8e2f5e] disabled:bg-gray-300 disabled:text-gray-500 sm:w-auto ${ring}`}>{buyable ? 'Add to Bag' : 'Sold Out'}</button>
+          {buyable && <button disabled={!buyable} onClick={buyNow} className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#352331] px-8 text-sm font-semibold text-white transition hover:bg-[#241722] disabled:bg-gray-300 disabled:text-gray-500 sm:w-auto ${ring}`}><Zap size={16} /> Buy It Now</button>}
+        </div>
+        {buyable && <p className="mt-2.5 text-xs text-[#6b5360]">Buy It Now = bag ke steps skip karke seedha checkout.</p>}
         {notice && <p role="status" className="mt-4 rounded-xl bg-pink-50 p-3 text-sm text-[#8e2f5e]">{notice}{notice === 'Added to your bag.' && <> <Link href="/checkout" className="font-semibold underline">Checkout</Link></>}</p>}
         <ul className="mt-6 grid gap-3 sm:grid-cols-3">{trust.map(({ i: I, t }) => <li key={t} className="flex items-center gap-2 rounded-2xl border border-pink-100 bg-white p-3 text-xs font-medium"><I size={18} className="shrink-0 text-[#a83c70]" />{t}</li>)}</ul><p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[#8e2f5e]"><ShieldCheck size={14} className="shrink-0" /> Damage ho to 50% refund ya replacement — no tension.</p>
         <div className="mt-6"><Accordion items={accItems} /></div>
         <div className="mt-6 flex flex-wrap items-center gap-2 text-sm"><span className="mr-1 flex items-center gap-1 text-[#6b5360]"><Share2 size={15} /> Share</span><button onClick={() => share('wa')} className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-4 text-xs font-medium ${ring}`}><MessageCircle size={14} /> WhatsApp</button><button onClick={() => share('copy')} className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-4 text-xs font-medium ${ring}`}><Link2 size={14} /> {copied ? 'Link copied' : 'Copy link'}</button>
-          {supportNumber && <a href={`https://wa.me/${supportNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="ml-auto text-xs text-[#a83c70] underline">Ask on WhatsApp</a>}</div>
+          {supportNumber && <a href={`https://wa.me/${supportNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Assalamualaikum *Sparklesbyfarry* ✨\nMujhe ye product order karna hai:\n\n*${product.name}* — ${money(price)}\n${pageUrl}\n\nPlease mujhe is ki availability aur details confirm kar dein. Shukriya! 💖`)}`} target="_blank" rel="noopener noreferrer" className="ml-auto text-xs text-[#a83c70] underline">Ask on WhatsApp</a>}</div>
       </section></div>
 
     {product.similar.length > 0 && <section className="mt-16"><h2 className="font-serif text-3xl">Similar Products</h2><div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">{product.similar.map(p => <ProductCard key={p.id} p={p} onAdd={addRelated} wished={wish.includes(p.id)} onWish={toggleWish} />)}</div></section>}
@@ -89,7 +96,8 @@ export default function ProductDetail({ product, deliveryFee, supportNumber }: {
   {showBar && <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-pink-100 bg-white/95 px-4 pt-3 backdrop-blur md:hidden" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
     <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-pink-50">{imgs[0] && <img src={imgs[0].image_url} alt="" className="h-full w-full object-cover" />}</div>
     <div className="min-w-0 flex-1"><p className="truncate text-xs">{product.name}</p><p className="text-sm font-semibold text-[#a83c70]">{money(price)}</p></div>
-    <button disabled={!buyable} onClick={add} className={`min-h-11 rounded-full bg-[#a83c70] px-6 text-sm font-semibold text-white disabled:bg-gray-300 ${ring}`}>{buyable ? 'Add to Bag' : 'Sold Out'}</button></div>}
+    <button disabled={!buyable} onClick={add} className={`min-h-11 shrink-0 rounded-full bg-[#a83c70] px-4 text-sm font-semibold text-white disabled:bg-gray-300 ${ring}`}>{buyable ? 'Add to Bag' : 'Sold Out'}</button>
+    {buyable && <button onClick={buyNow} className={`min-h-11 shrink-0 rounded-full bg-[#352331] px-4 text-sm font-semibold text-white ${ring}`}>Buy Now</button>}</div>}
   
   <WhatsAppFab lift={showBar} message={`Product: ${product.name} ${pageUrl}`.trim()} />
   </main></>;

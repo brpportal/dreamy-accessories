@@ -1,14 +1,18 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Heart, Plus, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Heart, Plus, Check, Zap } from 'lucide-react';
 import { trackEvent } from '@/components/analytics-tracker';
 import { Stars } from '@/components/ui';
+import { addLineQty } from '@/lib/cart';
 import { money, effectivePrice, isOnSale, discountPercent, savings, isPurchasable } from '@/lib/format';
 
 export type Product = { id: string; name: string; slug: string; description: string | null; price: number; sale_price: number | null; stock_quantity: number; is_featured: boolean; category_id?: string | null; rating_average?: number; rating_count?: number; categories?: { name: string } | null; product_images?: { image_url: string; display_order: number }[] };
 
 export default function ProductCard({ p, onAdd, wished, onWish, hideAdd = false }: { p: Product; onAdd: (p: Product) => void; wished: boolean; onWish: (id: string) => void; hideAdd?: boolean }) {
+  const router = useRouter();
+  const buyNow = () => { addLineQty({ id: p.id, name: p.name, price: effectivePrice(p), originalPrice: isOnSale(p) ? p.price : undefined, image: imgs[0]?.image_url || '', stock: p.stock_quantity }, 1); trackEvent('buy_now', { productId: p.id }); router.push('/checkout'); };
   const imgs = [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order);
   const sold = !isPurchasable(p);
   const sale = isOnSale(p) && !sold;
@@ -42,7 +46,10 @@ export default function ProductCard({ p, onAdd, wished, onWish, hideAdd = false 
         {sale && <span className="text-[11px] font-medium text-[#2f7d4f]">Save {money(savings(p))}</span>}
       </div>
       {!sold && p.stock_quantity <= 3 && <p className="mt-1 text-[11px] font-medium text-[#a83c70]">Only {p.stock_quantity} left</p>}
-      {!hideAdd && <button type="button" disabled={sold} onClick={() => { onAdd(p); setJustAdded(true); setTimeout(() => setJustAdded(false), 1600); }} className={`mt-4 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-4 text-[13px] font-semibold text-white shadow-md shadow-pink-200/70 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a83c70] focus-visible:ring-offset-2 disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none md:mt-auto ${justAdded ? 'bg-green-700' : 'bg-gradient-to-r from-[#a83c70] to-[#c4588e] hover:brightness-110'}`}>{sold ? 'Sold Out' : justAdded ? <>Added <Check size={15} /></> : <>Add to Bag <Plus size={15} /></>}</button>}
+      {(!hideAdd || !sold) && <div className="mt-4 space-y-2 md:mt-auto">
+        {!hideAdd && <button type="button" disabled={sold} onClick={() => { onAdd(p); setJustAdded(true); setTimeout(() => setJustAdded(false), 1600); }} className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-4 text-[13px] font-semibold text-white shadow-md shadow-pink-200/70 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a83c70] focus-visible:ring-offset-2 disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none ${justAdded ? 'bg-green-700' : 'bg-gradient-to-r from-[#a83c70] to-[#c4588e] hover:brightness-110'}`}>{sold ? 'Sold Out' : justAdded ? <>Added <Check size={15} /></> : <>Add to Bag <Plus size={15} /></>}</button>}
+        {!sold && <button type="button" onClick={buyNow} aria-label={`Buy ${p.name} now`} className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[#352331] px-4 text-[13px] font-semibold text-white shadow-md transition hover:bg-[#241722] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#352331] focus-visible:ring-offset-2">Buy It Now <Zap size={15} /></button>}
+      </div>}
     </div>
   </article>;
 }

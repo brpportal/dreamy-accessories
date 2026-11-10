@@ -12,6 +12,11 @@ export function addLine(item: Omit<CartLine, 'quantity'>): CartLine[] {
   const next = old ? cart.map(x => (x.id === item.id ? { ...x, stock: item.stock, price: item.price, originalPrice: item.originalPrice, quantity: Math.min(maxQty(item.stock), x.quantity + 1) } : x)) : [...cart, { ...item, quantity: 1 }];
   writeCart(next); return next;
 }
+export function addLineQty(item: Omit<CartLine, 'quantity'>, qty: number): CartLine[] {
+  const cart = readCart(); const old = cart.find(x => x.id === item.id);
+  const next = old ? cart.map(x => (x.id === item.id ? { ...x, stock: item.stock, price: item.price, originalPrice: item.originalPrice, quantity: Math.min(maxQty(item.stock), x.quantity + qty) } : x)) : [...cart, { ...item, quantity: Math.min(maxQty(item.stock), Math.max(1, qty)) }];
+  writeCart(next); return next;
+}
 export function useCart() {
   const [lines, setLines] = useState<CartLine[]>([]);
   useEffect(() => { const sync = () => setLines(readCart()); sync(); window.addEventListener(CART_EVENT, sync); window.addEventListener('storage', sync); return () => { window.removeEventListener(CART_EVENT, sync); window.removeEventListener('storage', sync); }; }, []);
