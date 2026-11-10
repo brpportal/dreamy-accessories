@@ -4,7 +4,7 @@ import AnalyticsTracker from '@/components/analytics-tracker';
 const title = 'Sparklesbyfarry | Sparkle. Shine. Inspire.';
 const description = 'Discover beautiful accessories delivered across Pakistan. Advance payment via Easypaisa and JazzCash.';
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://dreamy-accessories.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://sparklesbyfarry.vercel.app'),
   title, description,
   icons: { icon: '/logo.jpg', apple: '/logo.jpg' },
   openGraph: { title, description, siteName: 'Sparklesbyfarry', type: 'website', images: [{ url: '/og-cover.jpg', width: 1200, height: 630, alt: 'Sparklesbyfarry' }] },

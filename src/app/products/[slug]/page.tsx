@@ -34,12 +34,25 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const rs = (ratings || []) as { rating: number }[]; const breakdown = [0, 0, 0, 0, 0, 0];
   rs.forEach(x => { breakdown[x.rating] = (breakdown[x.rating] || 0) + 1; });
   const rating = { count: rs.length, average: rs.length ? Math.round((rs.reduce((a, x) => a + x.rating, 0) / rs.length) * 10) / 10 : 0, breakdown };
-  // Related products: RPC picks first, then same category, then featured/newest, so the section is never empty while other products exist.
+  // Recommendation algorithm. Pool = every other active product; ratings come from approved reviews only.
   const rpcIds = ((related || []) as { id: string }[]).map(x => x.id);
   const { data: pool } = await s.from('products').select('id,name,slug,description,price,sale_price,stock_quantity,is_featured,category_id,categories(name),product_images(image_url,display_order)').eq('is_active', true).neq('id', p.id).order('created_at', { ascending: false }).limit(40);
-  const cands = (pool || []) as unknown as (Product & { category_id: string | null })[];
-  const score = (x: Product & { category_id: string | null }) => (rpcIds.includes(x.id) ? 0 : 1000) + (rpcIds.includes(x.id) ? rpcIds.indexOf(x.id) : 0) + (p.category_id && x.category_id === p.category_id ? 0 : 100) + (x.is_featured ? 0 : 10) + (x.stock_quantity > 0 ? 0 : 500);
-  const relatedProducts = [...cands].sort((a, b) => score(a) - score(b)).slice(0, 4) as Product[];
+  type Cand = Product & { category_id: string | null };
+  const cands = (pool || []) as unknown as Cand[];
+  const { data: poolRatings } = cands.length ? await s.from('product_reviews').select('product_id,rating').eq('moderation_status', 'approved').in('product_id', cands.map(c => c.id)).limit(2000) : { data: [] as { product_id: string; rating: number }[] };
+  const rmap = new Map<string, { sum: number; n: number }>();
+  ((poolRatings || []) as { product_id: string; rating: number }[]).forEach(x => { const e = rmap.get(x.product_id) || { sum: 0, n: 0 }; e.sum += x.rating; e.n += 1; rmap.set(x.product_id, e); });
+  cands.forEach(c => { const e = rmap.get(c.id); c.rating_average = e ? Math.round((e.sum / e.n) * 10) / 10 : 0; c.rating_count = e ? e.n : 0; });
+  const myPrice = effectivePrice(p);
+  const priceOf = (x: Cand) => effectivePrice(x);
+  const disc = (x: Cand) => (x.price > 0 && x.sale_price && x.sale_price < x.price ? ((x.price - x.sale_price) / x.price) * 100 : 0);
+  // SIMILAR: same category first, then the store RPC's picks, then closest price, then best rated. Sold-out sinks.
+  const similarScore = (x: Cand) => (p.category_id && x.category_id === p.category_id ? 100 : 0) + (rpcIds.includes(x.id) ? 60 - rpcIds.indexOf(x.id) * 5 : 0) + Math.max(0, 40 - (Math.abs(priceOf(x) - myPrice) / Math.max(1, myPrice)) * 100) + (x.rating_average || 0) * 4 + Math.min(x.rating_count || 0, 10) + (x.stock_quantity > 0 ? 10 : -100);
+  const similar = [...cands].sort((a, b) => similarScore(b) - similarScore(a)).slice(0, 4);
+  // RECOMMENDED: the algorithm weighs rating, review count, discount %, featured and stock, excluding Similar picks.
+  const simIds = new Set(similar.map(x => x.id));
+  const recScore = (x: Cand) => (x.rating_average || 0) * 10 + Math.min(x.rating_count || 0, 20) * 1.5 + disc(x) * 0.8 + (x.is_featured ? 25 : 0) + (p.category_id && x.category_id === p.category_id ? 10 : 0) + (x.stock_quantity > 0 ? 10 : -100);
+  const recommended = cands.filter(x => !simIds.has(x.id)).sort((a, b) => recScore(b) - recScore(a)).slice(0, 4);
   const cat = Array.isArray(p.categories) ? p.categories[0] : p.categories;
-  return <ProductDetail product={{ id: p.id, name: p.name, slug: p.slug, description: p.description, price: p.price, sale_price: p.sale_price, stock_quantity: p.stock_quantity, category: cat?.name || null, images: [...((p.product_images || []) as Img[])].sort((a, b) => a.display_order - b.display_order), rating, reviews: reviews || [], related: relatedProducts }} deliveryFee={Number((delivery?.setting_value as { delivery_fee?: number } | null)?.delivery_fee ?? 0)} supportNumber={String((wa?.setting_value as { support_number?: string; order_receiving_number?: string } | null)?.support_number || (wa?.setting_value as { order_receiving_number?: string } | null)?.order_receiving_number || '')} />;
+  return <ProductDetail product={{ id: p.id, name: p.name, slug: p.slug, description: p.description, price: p.price, sale_price: p.sale_price, stock_quantity: p.stock_quantity, category: cat?.name || null, images: [...((p.product_images || []) as Img[])].sort((a, b) => a.display_order - b.display_order), rating, reviews: reviews || [], similar: similar as Product[], recommended: recommended as Product[] }} deliveryFee={Number((delivery?.setting_value as { delivery_fee?: number } | null)?.delivery_fee ?? 0)} supportNumber={String((wa?.setting_value as { support_number?: string; order_receiving_number?: string } | null)?.support_number || (wa?.setting_value as { order_receiving_number?: string } | null)?.order_receiving_number || '')} />;
 }

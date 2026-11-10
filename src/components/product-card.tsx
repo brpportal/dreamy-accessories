@@ -8,7 +8,7 @@ import { money, effectivePrice, isOnSale, discountPercent, savings, isPurchasabl
 
 export type Product = { id: string; name: string; slug: string; description: string | null; price: number; sale_price: number | null; stock_quantity: number; is_featured: boolean; category_id?: string | null; rating_average?: number; rating_count?: number; categories?: { name: string } | null; product_images?: { image_url: string; display_order: number }[] };
 
-export default function ProductCard({ p, onAdd, wished, onWish }: { p: Product; onAdd: (p: Product) => void; wished: boolean; onWish: (id: string) => void }) {
+export default function ProductCard({ p, onAdd, wished, onWish, hideAdd = false }: { p: Product; onAdd: (p: Product) => void; wished: boolean; onWish: (id: string) => void; hideAdd?: boolean }) {
   const imgs = [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order);
   const sold = !isPurchasable(p);
   const sale = isOnSale(p) && !sold;
@@ -38,7 +38,7 @@ export default function ProductCard({ p, onAdd, wished, onWish }: { p: Product; 
       </div>
       {sale && <p className="mt-0.5 text-[11px] text-[#6b5360]">Save {money(savings(p))}</p>}
       {!sold && p.stock_quantity <= 3 && <p className="mt-0.5 text-[11px] font-medium text-[#a83c70]">Only {p.stock_quantity} left</p>}
-      <button type="button" disabled={sold} onClick={() => { onAdd(p); setJustAdded(true); setTimeout(() => setJustAdded(false), 1600); }} className={`mt-3 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[#a83c70] px-4 text-xs font-semibold text-white transition hover:bg-[#8e2f5e] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a83c70] focus-visible:ring-offset-2 disabled:bg-gray-300 disabled:text-gray-500 md:mt-auto md:translate-y-1 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 md:disabled:opacity-100 ${justAdded ? 'bg-green-600 hover:bg-green-600' : ''}`}>{sold ? 'Sold Out' : justAdded ? <>Added <Check size={14} /></> : <>Add to Bag <Plus size={14} /></>}</button>
+      {!hideAdd && <button type="button" disabled={sold} onClick={() => { onAdd(p); setJustAdded(true); setTimeout(() => setJustAdded(false), 1600); }} className={`mt-3 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[#a83c70] px-4 text-xs font-semibold text-white transition hover:bg-[#8e2f5e] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a83c70] focus-visible:ring-offset-2 disabled:bg-gray-300 disabled:text-gray-500 md:mt-auto md:translate-y-1 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 md:disabled:opacity-100 ${justAdded ? 'bg-green-600 hover:bg-green-600' : ''}`}>{sold ? 'Sold Out' : justAdded ? <>Added <Check size={14} /></> : <>Add to Bag <Plus size={14} /></>}</button>}
     </div>
   </article>;
 }

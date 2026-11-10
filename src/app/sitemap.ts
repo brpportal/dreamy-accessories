@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://dreamy-accessories.vercel.app').replace(/\/$/, '');
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://sparklesbyfarry.vercel.app').replace(/\/$/, '');
   const entries: MetadataRoute.Sitemap = [{ url: `${base}/`, changeFrequency: 'daily', priority: 1 }, { url: `${base}/track-order`, changeFrequency: 'monthly', priority: 0.3 }];
   try {
     const s = await createSupabaseServerClient();
