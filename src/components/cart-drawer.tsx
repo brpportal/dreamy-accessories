@@ -1,12 +1,26 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Trash2, X, ReceiptText } from 'lucide-react';
 import { useCart, maxQty } from '@/lib/cart';
 import { money } from '@/lib/format';
 
 export default function CartDrawer({ open, onClose, fee }: { open: boolean; onClose: () => void; fee?: number }) {
   const { lines, subtotal, setQty, remove } = useCart();
+  type MyOrder = { n: string; phone: string; total: number; at: number; status?: string; pay?: string };
+  const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    let list: MyOrder[] = [];
+    try { const v = JSON.parse(localStorage.getItem('da-my-orders') || '[]'); if (Array.isArray(v)) list = v; } catch { /* none */ }
+    setMyOrders(list);
+    list.slice(0, 5).forEach(o => {
+      fetch('/api/orders/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderNumber: o.n, phone: o.phone }) })
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => { if (d?.order) setMyOrders(prev => prev.map(x => (x.n === o.n ? { ...x, status: d.order.order_status, pay: d.order.payment_status } : x))); })
+        .catch(() => {});
+    });
+  }, [open ]);
   useEffect(() => {
     if (!open) return; const prev = document.body.style.overflow; document.body.style.overflow = 'hidden';
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', esc);
@@ -17,6 +31,15 @@ export default function CartDrawer({ open, onClose, fee }: { open: boolean; onCl
   return <div className="fixed inset-0 z-[90] flex justify-end bg-[#352331]/40 backdrop-blur-[2px]" onClick={onClose}>
     <aside role="dialog" aria-modal="true" aria-label="Your bag" className="da-drawer flex h-full w-full max-w-md flex-col bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
       <div className="flex items-center justify-between border-b border-pink-100 px-6 py-5"><h2 className="font-serif text-2xl">Your Bag</h2><button type="button" onClick={onClose} aria-label="Close bag" className={`grid h-11 w-11 place-items-center rounded-full hover:bg-pink-50 ${ring}`}><X size={20} /></button></div>
+      {myOrders.length > 0 && <div className="shrink-0 border-b border-pink-100 bg-[#fffafd] px-6 py-4">
+        <h3 className="flex items-center gap-2 text-sm font-bold"><ReceiptText size={16} className="text-[#a83c70]" /> My Orders <span className="text-[11px] font-medium text-[#6b5360]">(is phone ke orders)</span></h3>
+        <ul className="mt-2.5 space-y-2">{myOrders.slice(0, 5).map(o => <li key={o.n}><Link href="/track-order" onClick={onClose} className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border border-pink-100 bg-white px-3.5 py-2.5 text-xs transition hover:border-pink-300 ${ring}`}>
+          <span className="font-mono font-bold">{o.n}</span>
+          <span className="text-[#6b5360]">{new Date(o.at).toLocaleDateString('en-GB')}</span>
+          <span className="ml-auto font-semibold">{money(o.total)}</span>
+          {o.status ? <span className="rounded-full bg-pink-50 px-2 py-0.5 font-semibold capitalize text-[#a83c70]">{o.status} · {(o.pay || '').replaceAll('_', ' ')}</span> : <span className="font-semibold text-[#a83c70]">Track →</span>}
+        </Link></li>)}</ul>
+      </div>}
       {lines.length === 0
         ? <div className="flex flex-1 flex-col items-center justify-center p-8 text-center"><span className="grid h-20 w-20 place-items-center rounded-full bg-pink-50"><ShoppingBag size={34} className="text-[#a83c70]" /></span><p className="mt-5 font-serif text-2xl">Your bag is feeling light</p><p className="mt-1 text-sm text-[#6b5360]">Add something lovely to get started.</p><button type="button" onClick={onClose} className={`mt-6 min-h-12 rounded-full bg-[#a83c70] px-8 text-sm font-semibold text-white ${ring}`}>Continue shopping</button></div>
         : <><ul className="flex-1 divide-y divide-pink-50 overflow-y-auto px-6">{lines.map(x => <li key={x.id} className="flex gap-4 py-5">
