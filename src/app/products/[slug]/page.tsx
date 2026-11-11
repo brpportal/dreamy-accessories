@@ -4,12 +4,13 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import ProductDetail from '@/components/product-detail';
 import type { Product } from '@/components/product-card';
 import { effectivePrice } from '@/lib/format';
+import { cleanVariants } from '@/lib/variants';
 
 export const dynamic = 'force-dynamic';
 type Img = { image_url: string; alt_text: string | null; display_order: number };
 async function load(slug: string) {
   const s = await createSupabaseServerClient();
-  const { data: p, error } = await s.from('products').select('id,name,slug,description,price,sale_price,stock_quantity,is_featured,category_id,categories(name),product_images(image_url,alt_text,display_order)').eq('slug', slug).eq('is_active', true).maybeSingle();
+  const { data: p, error } = await s.from('products').select('id,name,slug,description,price,sale_price,stock_quantity,is_featured,category_id,variants,categories(name),product_images(image_url,alt_text,display_order)').eq('slug', slug).eq('is_active', true).maybeSingle();
   if (error || !p) return null;
   return { s, p };
 }
@@ -54,5 +55,5 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const recScore = (x: Cand) => (x.rating_average || 0) * 10 + Math.min(x.rating_count || 0, 20) * 1.5 + disc(x) * 0.8 + (x.is_featured ? 25 : 0) + (p.category_id && x.category_id === p.category_id ? 10 : 0) + (x.stock_quantity > 0 ? 10 : -100);
   const recommended = cands.filter(x => !simIds.has(x.id)).sort((a, b) => recScore(b) - recScore(a)).slice(0, 4);
   const cat = Array.isArray(p.categories) ? p.categories[0] : p.categories;
-  return <ProductDetail product={{ id: p.id, name: p.name, slug: p.slug, description: p.description, price: p.price, sale_price: p.sale_price, stock_quantity: p.stock_quantity, category: cat?.name || null, images: [...((p.product_images || []) as Img[])].sort((a, b) => a.display_order - b.display_order), rating, reviews: reviews || [], similar: similar as Product[], recommended: recommended as Product[] }} deliveryFee={Number((delivery?.setting_value as { delivery_fee?: number } | null)?.delivery_fee ?? 0)} supportNumber={String((wa?.setting_value as { support_number?: string; order_receiving_number?: string } | null)?.support_number || (wa?.setting_value as { order_receiving_number?: string } | null)?.order_receiving_number || '')} />;
+  return <ProductDetail product={{ id: p.id, name: p.name, slug: p.slug, description: p.description, price: p.price, sale_price: p.sale_price, stock_quantity: p.stock_quantity, variants: cleanVariants(p.variants), category: cat?.name || null, images: [...((p.product_images || []) as Img[])].sort((a, b) => a.display_order - b.display_order), rating, reviews: reviews || [], similar: similar as Product[], recommended: recommended as Product[] }} deliveryFee={Number((delivery?.setting_value as { delivery_fee?: number } | null)?.delivery_fee ?? 0)} supportNumber={String((wa?.setting_value as { support_number?: string; order_receiving_number?: string } | null)?.support_number || (wa?.setting_value as { order_receiving_number?: string } | null)?.order_receiving_number || '')} />;
 }
