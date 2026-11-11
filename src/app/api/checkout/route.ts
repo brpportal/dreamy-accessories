@@ -2,7 +2,7 @@ import { rateLimit, tooMany } from '@/lib/rate-limit';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-const schema=z.object({name:z.string().trim().min(2).max(100),phone:z.string().trim().min(10).max(25),city:z.string().trim().min(2).max(80),address:z.string().trim().min(8).max(500),paymentMethod:z.enum(['easypaisa','jazzcash']),items:z.array(z.object({id:z.string().uuid(),quantity:z.number().int().min(1).max(20)})).min(1).max(30).superRefine((items,ctx)=>{if(new Set(items.map(x=>x.id)).size!==items.length)ctx.addIssue({code:'custom',message:'Duplicate cart items'});})});
+const schema=z.object({name:z.string().trim().min(2).max(100),phone:z.string().trim().min(10).max(25),city:z.string().trim().min(2).max(80),address:z.string().trim().min(8).max(500),paymentMethod:z.enum(['easypaisa','jazzcash']),items:z.array(z.object({id:z.string().uuid(),quantity:z.number().int().min(1).max(20),variant:z.string().trim().min(1).max(80).optional()})).min(1).max(30).superRefine((items,ctx)=>{if(new Set(items.map(x=>x.id+'|'+(x.variant||''))).size!==items.length)ctx.addIssue({code:'custom',message:'Duplicate cart items'});})});
 export async function POST(req:NextRequest){
   if(!rateLimit(req,'checkout',8,60000)) return tooMany();
   try {
