@@ -7,9 +7,10 @@ import { Accordion, Dropdown, Eyebrow, Stars } from '@/components/ui';
 import WhatsAppFab from '@/components/whatsapp-fab';
 import { faqItems } from '@/lib/content/faq';
 import { money, effectivePrice, isOnSale, isPurchasable } from '@/lib/format';
+import { lineKey } from '@/lib/cart';
 import { ShoppingBag, Search, Sparkles, Truck, ShieldCheck, Wallet, MessageCircle, Gem, HeartHandshake, Headset, Menu, X, Minus, Plus, Instagram, Facebook, BadgeCheck, SearchX, CheckCircle2 } from 'lucide-react';
 
-type CartLine = { id: string; name: string; price: number; originalPrice?: number; image: string; quantity: number; stock?: number };
+type CartLine = { id: string; name: string; price: number; originalPrice?: number; image: string; quantity: number; stock?: number; variant?: string };
 type Settings = { storeName: string; announcement: string; deliveryFee: number; supportNumber: string; instagram: string; facebook: string };
 type Review = { id: string; name: string; rating: number; title: string | null; excerpt: string; product: string };
 type Sort = 'featured' | 'low' | 'high' | 'newest' | 'rated';
@@ -48,14 +49,14 @@ export default function Storefront() {
     if (!isPurchasable(p)) return;
     trackEvent('add_to_cart', { productId: p.id });
     const image = [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order)[0]?.image_url || '';
-    setCart(old => { const ex = old.find(x => x.id === p.id); const max = cap(p.stock_quantity);
-      return ex ? old.map(x => x.id === p.id ? { ...x, stock: p.stock_quantity, quantity: Math.min(max, x.quantity + 1) } : x)
+    setCart(old => { const ex = old.find(x => x.id === p.id && !x.variant); const max = cap(p.stock_quantity);
+      return ex ? old.map(x => x.id === p.id && !x.variant ? { ...x, stock: p.stock_quantity, quantity: Math.min(max, x.quantity + 1) } : x)
         : [...old, { id: p.id, name: p.name, price: effectivePrice(p), originalPrice: isOnSale(p) ? p.price : undefined, image, quantity: 1, stock: p.stock_quantity }]; });
     setPulse(false); requestAnimationFrame(() => setPulse(true)); setTimeout(() => setPulse(false), 600);
     setToastName(p.name); setToast(true); if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(false), 4000);
   }, []);
-  const setQty = (id: string, d: number) => setCart(c => c.map(x => x.id === id ? { ...x, quantity: Math.max(1, Math.min(cap(x.stock), x.quantity + d)) } : x));
-  const remove = (id: string) => { trackEvent('remove_from_cart', { productId: id }); setRemoving(id); setTimeout(() => { setCart(c => c.filter(x => x.id !== id)); setRemoving(null); }, 220); };
+  const setQty = (key: string, d: number) => setCart(c => c.map(x => lineKey(x) === key ? { ...x, quantity: Math.max(1, Math.min(cap(x.stock), x.quantity + d)) } : x));
+  const remove = (key: string) => { const line = cart.find(x => lineKey(x) === key); trackEvent('remove_from_cart', { productId: line?.id || key }); setRemoving(key); setTimeout(() => { setCart(c => c.filter(x => lineKey(x) !== key)); setRemoving(null); }, 220); };
 
   const categories = useMemo(() => Array.from(new Set(products.map(p => p.categories?.name).filter(Boolean) as string[])), [products]);
   const catTiles = useMemo(() => categories.map(name => ({ name, image: products.filter(p => p.categories?.name === name).flatMap(p => [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order).slice(0, 1))[0]?.image_url || '' })), [categories, products]);
@@ -145,11 +146,11 @@ export default function Storefront() {
     {cartOpen && <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={() => setCartOpen(false)}><aside role="dialog" aria-modal="true" aria-label="Your bag" className="da-drawer flex h-full w-full max-w-md flex-col bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
       <div className="flex items-center justify-between border-b border-pink-100 p-5"><h3 className="font-serif text-2xl">Your Bag</h3><button onClick={() => setCartOpen(false)} aria-label="Close bag" className={`grid h-11 w-11 place-items-center rounded-full hover:bg-pink-50 ${ring}`}><X size={20} /></button></div>
       {cart.length === 0 ? <div className="flex flex-1 flex-col items-center justify-center p-8 text-center"><ShoppingBag size={44} className="text-pink-300" /><p className="mt-4 font-serif text-2xl">Your bag is feeling light</p><button onClick={() => { setCartOpen(false); goShop(); }} className={`mt-6 min-h-12 rounded-full bg-[#a83c70] px-8 text-sm font-semibold text-white ${ring}`}>Start Shopping</button></div>
-        : <><div className="flex-1 space-y-4 overflow-y-auto p-5">{cart.map(item => { const sv = item.originalPrice && item.originalPrice > item.price ? item.originalPrice - item.price : 0; return <div key={item.id} className={`flex items-center gap-3 border-b border-pink-100 pb-4 transition-all duration-200 ${removing === item.id ? 'translate-x-full opacity-0' : ''}`}>
+        : <><div className="flex-1 space-y-4 overflow-y-auto p-5">{cart.map(item => { const sv = item.originalPrice && item.originalPrice > item.price ? item.originalPrice - item.price : 0; return <div key={lineKey(item)} className={`flex items-center gap-3 border-b border-pink-100 pb-4 transition-all duration-200 ${removing === lineKey(item) ? 'translate-x-full opacity-0' : ''}`}>
           <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-pink-50">{item.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center font-serif text-2xl text-pink-300">{item.name.charAt(0)}</span>}</div>
-          <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[#a83c70]">{money(item.price)}{sv > 0 && <><span className="ml-2 text-gray-400 line-through">{money(item.originalPrice as number)}</span><span className="ml-2 text-[#6b5360]">Save {money(sv)}</span></>}</p>
-            <div className="mt-2 flex items-center gap-1"><button onClick={() => setQty(item.id, -1)} disabled={item.quantity <= 1} aria-label={`Decrease ${item.name}`} className={`grid h-11 w-11 place-items-center rounded-full border border-pink-200 disabled:opacity-40 ${ring}`}><Minus size={14} /></button><span className="w-6 text-center text-sm" aria-live="polite">{item.quantity}</span><button onClick={() => setQty(item.id, 1)} disabled={item.quantity >= cap(item.stock)} aria-label={`Increase ${item.name}`} className={`grid h-11 w-11 place-items-center rounded-full border border-pink-200 disabled:opacity-40 ${ring}`}><Plus size={14} /></button>
-              <button onClick={() => remove(item.id)} aria-label={`Remove ${item.name}`} className={`ml-auto grid h-11 w-11 place-items-center rounded-full text-gray-500 hover:text-red-600 ${ring}`}><X size={18} /></button></div>{item.quantity >= cap(item.stock) && <p className="mt-1 text-[11px] text-[#6b5360]">Only {cap(item.stock)} available</p>}</div></div>; })}
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.name}</p>{item.variant && <p className="text-xs text-[#6b5360]">Shade: {item.variant}</p>}<p className="text-xs text-[#a83c70]">{money(item.price)}{sv > 0 && <><span className="ml-2 text-gray-400 line-through">{money(item.originalPrice as number)}</span><span className="ml-2 text-[#6b5360]">Save {money(sv)}</span></>}</p>
+            <div className="mt-2 flex items-center gap-1"><button onClick={() => setQty(lineKey(item), -1)} disabled={item.quantity <= 1} aria-label={`Decrease ${item.name}`} className={`grid h-11 w-11 place-items-center rounded-full border border-pink-200 disabled:opacity-40 ${ring}`}><Minus size={14} /></button><span className="w-6 text-center text-sm" aria-live="polite">{item.quantity}</span><button onClick={() => setQty(lineKey(item), 1)} disabled={item.quantity >= cap(item.stock)} aria-label={`Increase ${item.name}`} className={`grid h-11 w-11 place-items-center rounded-full border border-pink-200 disabled:opacity-40 ${ring}`}><Plus size={14} /></button>
+              <button onClick={() => remove(lineKey(item))} aria-label={`Remove ${item.name}`} className={`ml-auto grid h-11 w-11 place-items-center rounded-full text-gray-500 hover:text-red-600 ${ring}`}><X size={18} /></button></div>{item.quantity >= cap(item.stock) && <p className="mt-1 text-[11px] text-[#6b5360]">Only {cap(item.stock)} available</p>}</div></div>; })}
           <p className="text-xs text-[#6b5360]">{fee ? `Delivery (flat ${money(fee)})` : 'Delivery'} is added at checkout.</p></div>
         <div className="border-t border-pink-100 p-5" style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}><div className="flex justify-between text-sm"><span>Subtotal</span><b className="text-lg text-[#a83c70]">{money(subtotal)}</b></div><Link href="/checkout" className={`mt-4 flex min-h-12 items-center justify-center rounded-full bg-[#a83c70] px-6 text-sm font-semibold text-white hover:bg-[#8e2f5e] ${ring}`}>Checkout</Link><p className="mt-3 text-center text-[11px] text-[#6b5360]">Secure advance payment · Easypaisa &amp; JazzCash</p></div></>}
     </aside></div>}
