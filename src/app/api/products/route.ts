@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 export async function GET(){
   try {
     const supabase=await createSupabaseServerClient();
-    const {data,error}=await supabase.from('products').select('id,name,slug,description,price,sale_price,stock_quantity,is_featured,category_id,categories(name),product_images(image_url,display_order)').eq('is_active',true).order('created_at',{ascending:false}).limit(60);
+    const {data,error}=await supabase.from('products').select('id,name,slug,description,price,sale_price,stock_quantity,is_featured,category_id,variants,categories(name),product_images(image_url,display_order)').eq('is_active',true).order('created_at',{ascending:false}).limit(60);
     if(error) throw error;
     const ids=(data??[]).map((p:{id:string})=>p.id);
     // Rating aggregates are computed here on the server from APPROVED reviews only; only the totals reach the client.
