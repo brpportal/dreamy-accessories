@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, XCircle, Search, ExternalLink, MessageCircle } from 'lucide-react';
 
-type Order = { id: string; order_number: string; customer_name: string; customer_phone: string; customer_city: string; customer_address: string; subtotal: number; delivery_charges: number; total_amount: number; payment_method: string; payment_status: string; order_status: string; created_at: string; order_items: { product_name_snapshot: string; quantity: number; item_total: number }[]; payments: { id: string; transaction_reference: string | null; payment_status: string; payment_proof_url: string | null; customer_submitted_at: string | null }[]; shipments: { courier_name: string; tracking_number: string; tracking_url: string; shipment_status: string }[] };
+type Order = { id: string; order_number: string; customer_name: string; customer_phone: string; customer_city: string; customer_address: string; subtotal: number; delivery_charges: number; total_amount: number; payment_method: string; payment_status: string; order_status: string; created_at: string; order_items: { product_name_snapshot: string; quantity: number; item_total: number; variant_name: string | null }[]; payments: { id: string; transaction_reference: string | null; payment_status: string; payment_proof_url: string | null; customer_submitted_at: string | null }[]; shipments: { courier_name: string; tracking_number: string; tracking_url: string; shipment_status: string }[] };
 
 const money = (n: number) => `Rs. ${Number(n || 0).toLocaleString('en-PK')}`;
 const STATUSES = ['received', 'processing', 'dispatched', 'shipped', 'delivered', 'cancelled'];
@@ -79,7 +79,7 @@ export default function OrdersManager() {
           </div>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Products ordered</p>
-            <ul className="mt-1.5 space-y-1">{(o.order_items || []).map((i, n) => <li key={n} className="flex justify-between gap-3"><span className="font-medium">{i.product_name_snapshot} <span className="text-gray-400">× {i.quantity}</span></span><span>{money(i.item_total)}</span></li>)}</ul>
+            <ul className="mt-1.5 space-y-1">{(o.order_items || []).map((i, n) => <li key={n} className="flex justify-between gap-3"><span className="font-medium">{i.product_name_snapshot} <span className="text-gray-400">× {i.quantity}</span>{i.variant_name && <span className="block text-xs font-normal text-gray-500">Shade: {i.variant_name}</span>}</span><span>{money(i.item_total)}</span></li>)}</ul>
             <div className="mt-2 space-y-0.5 border-t border-dashed border-pink-100 pt-2 text-xs text-gray-500">
               <p className="flex justify-between"><span>Subtotal</span><span>{money(o.subtotal)}</span></p>
               <p className="flex justify-between"><span>Delivery</span><span>{money(o.delivery_charges)}</span></p>
