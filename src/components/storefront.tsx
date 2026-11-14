@@ -25,6 +25,7 @@ export default function Storefront() {
   const [settings, setSettings] = useState<Settings | null>(null); const [reviews, setReviews] = useState<Review[]>([]);
   const [cartOpen, setCartOpen] = useState(false); const [menuOpen, setMenuOpen] = useState(false); const [scrolled, setScrolled] = useState(false); const [pulse, setPulse] = useState(false); const [toast, setToast] = useState(false);
   const [wish, setWish] = useState<string[]>([]); const [removing, setRemoving] = useState<string | null>(null); const [toastName, setToastName] = useState('');
+  const [covers, setCovers] = useState<{ name: string; image_url: string }[]>([]);
   const [search, setSearch] = useState(''); const [category, setCategory] = useState('All'); const [range, setRange] = useState(0); const [sort, setSort] = useState<Sort>('featured');
   const cartLoaded = useRef(false); const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -32,7 +33,7 @@ export default function Storefront() {
     try { setCart(JSON.parse(localStorage.getItem('da-cart') || '[]')); } catch {}
     try { setWish(JSON.parse(localStorage.getItem('da-wishlist') || '[]')); } catch {}
     cartLoaded.current = true;
-    fetch('/api/products').then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); setProducts(d.products || []); }).catch(e => setError(e.message)).finally(() => setLoading(false));
+    fetch('/api/products').then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); setProducts(d.products || []); setCovers(d.categoryCovers || []); }).catch(e => setError(e.message)).finally(() => setLoading(false));
     fetch('/api/site-settings').then(r => r.ok ? r.json() : null).then(d => d && setSettings(d)).catch(() => {});
     fetch('/api/reviews/featured').then(r => r.ok ? r.json() : { reviews: [] }).then(d => setReviews(d.reviews || [])).catch(() => {});
     const onScroll = () => setScrolled(window.scrollY > 8); onScroll(); window.addEventListener('scroll', onScroll, { passive: true });
@@ -59,7 +60,8 @@ export default function Storefront() {
   const remove = (key: string) => { const line = cart.find(x => lineKey(x) === key); trackEvent('remove_from_cart', { productId: line?.id || key }); setRemoving(key); setTimeout(() => { setCart(c => c.filter(x => lineKey(x) !== key)); setRemoving(null); }, 220); };
 
   const categories = useMemo(() => Array.from(new Set(products.map(p => p.categories?.name).filter(Boolean) as string[])), [products]);
-  const catTiles = useMemo(() => categories.map(name => ({ name, image: products.filter(p => p.categories?.name === name).flatMap(p => [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order).slice(0, 1))[0]?.image_url || '' })), [categories, products]);
+  const coverMap = useMemo(() => new Map(covers.map(c => [c.name, c.image_url])), [covers]);
+  const catTiles = useMemo(() => categories.map(name => ({ name, image: coverMap.get(name) || products.filter(p => p.categories?.name === name).flatMap(p => [...(p.product_images || [])].sort((a, b) => a.display_order - b.display_order).slice(0, 1))[0]?.image_url || '' })), [categories, products, coverMap]);
   const featured = useMemo(() => products.filter(p => p.is_featured), [products]);
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase(); const r = PRICE_RANGES[range];
